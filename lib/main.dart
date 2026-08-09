@@ -4,29 +4,35 @@ import 'models/text_analysis_models.dart';
 import 'services/gemini_service.dart';
 import 'services/on_device_classifier_service.dart';
 import 'theme/app_theme.dart';
+
+import 'part_two_app.dart';
 import 'widgets/api_key_dialog.dart';
 import 'widgets/gemini_results_card.dart';
 import 'widgets/on_device_results_card.dart';
 import 'widgets/sample_text_presets.dart';
 
 void main() {
-  runApp(const SmartTextAnalyzerApp());
+  // Video 2: Structured Output, Streaming & Resilient Error Handling
+  runApp(const PartTwoApp());
+
+  // Video 1: Smart Text Analyzer - Gemini + On-Device TFLite
+  // runApp(const SmartTextAnalyzerApp());
 }
 
+/// ----------------------------------------------------------------------------
+/// VIDEO 1 APP: Smart Text Analyzer (Cloud Gemini + On-Device TFLite)
+/// ----------------------------------------------------------------------------
 class SmartTextAnalyzerApp extends StatelessWidget {
   const SmartTextAnalyzerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Smart Text Analyzer',
+      title: 'Smart Text Analyzer (Video 1)',
       debugShowCheckedModeBanner: false,
-
-    
       theme: AppTheme.lightTheme(context),
       darkTheme: AppTheme.darkTheme(context),
       themeMode: ThemeMode.system,
-
       home: const SmartTextAnalyzerScreen(),
     );
   }
@@ -40,22 +46,15 @@ class SmartTextAnalyzerScreen extends StatefulWidget {
 }
 
 class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
-  // Controller for user text input
   final TextEditingController _textController = TextEditingController();
-
-  // STEP 1: Service Instances
   final OnDeviceClassifierService _onDeviceService = OnDeviceClassifierService();
 
-  // Gemini API key state (can be passed via --dart-define or entered in UI)
   String _geminiApiKey = const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
-
-  // STEP 2: Main Analysis State
   TextAnalysisResult _state = TextAnalysisResult();
 
   @override
   void initState() {
     super.initState();
-    // Initialize TFLite model on app startup
     _onDeviceService.initializeModel();
   }
 
@@ -66,7 +65,6 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
     super.dispose();
   }
 
-  // STEP 2: Execution Controller & Parallel State Handler
   Future<void> _analyzeText() async {
     final text = _textController.text.trim();
     if (text.isEmpty) {
@@ -81,7 +79,6 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
 
     FocusScope.of(context).unfocus();
 
-    // 1. Reset state & trigger loading indicators for both Cloud & On-Device
     setState(() {
       _state = TextAnalysisResult(
         isGeminiLoading: true,
@@ -89,12 +86,10 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
       );
     });
 
-    // 2. Trigger parallel background execution
     _runOnDeviceClassification(text);
     _runGeminiAnalysis(text);
   }
 
-  /// Step 2a: Run On-Device TFLite Model
   Future<void> _runOnDeviceClassification(String text) async {
     try {
       final classification = await _onDeviceService.classifyText(text);
@@ -117,7 +112,6 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
     }
   }
 
-  /// Step 2b: Run Cloud Gemini AI via googleai_dart
   Future<void> _runGeminiAnalysis(String text) async {
     if (_geminiApiKey.isEmpty) {
       if (!mounted) return;
@@ -145,14 +139,13 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
       if (!mounted) return;
       setState(() {
         _state = _state.copyWith(
-          geminiError: "An error occured.",
+          geminiError: e.toString().replaceAll('Exception: ', ''),
           isGeminiLoading: false,
         );
       });
     }
   }
 
-  /// Dialog helper to set or update Gemini API Key
   Future<void> _configureApiKey() async {
     final newKey = await showDialog<String>(
       context: context,
@@ -164,7 +157,6 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
         _geminiApiKey = newKey;
       });
 
-      // Re-run analysis if input text is present
       if (_textController.text.trim().isNotEmpty && _geminiApiKey.isNotEmpty) {
         setState(() {
           _state = _state.copyWith(
@@ -177,7 +169,6 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
     }
   }
 
-  // STEP 3: Displaying Results Side-by-Side
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -215,27 +206,17 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header Banner
                 _buildHeaderBanner(isDark),
-
                 const SizedBox(height: 20),
-
-                // Input Text Area
                 _buildInputSection(isDark),
-
                 const SizedBox(height: 16),
-
-                // Sample Text Presets
                 SampleTextPresets(
                   onSelectPreset: (sampleText) {
                     _textController.text = sampleText;
                     setState(() {});
                   },
                 ),
-
                 const SizedBox(height: 20),
-
-                
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.xBlue,
@@ -276,10 +257,7 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 28),
-
-                // Results Section Header
                 const Row(
                   children: [
                     Text(
@@ -294,15 +272,11 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
                     Expanded(child: Divider(indent: 12)),
                   ],
                 ),
-
                 const SizedBox(height: 16),
-
-                // STEP 3: Responsive Side-by-Side Cards
                 if (isDesktopOrTablet)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Left Column: Cloud AI (Gemini)
                       Expanded(
                         child: GeminiResultsCard(
                           insight: _state.geminiInsight,
@@ -313,7 +287,6 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
                         ),
                       ),
                       const SizedBox(width: 20),
-                      // Right Column: On-Device Model (TFLite)
                       Expanded(
                         child: OnDeviceResultsCard(
                           classification: _state.onDeviceClassification,
@@ -326,7 +299,6 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
                 else
                   Column(
                     children: [
-                      // Stacked view for Mobile screens
                       OnDeviceResultsCard(
                         classification: _state.onDeviceClassification,
                         isLoading: _state.isOnDeviceLoading,
@@ -342,10 +314,7 @@ class _SmartTextAnalyzerScreenState extends State<SmartTextAnalyzerScreen> {
                       ),
                     ],
                   ),
-
                 const SizedBox(height: 32),
-
-                // Tutorial Comparison Footer
                 _buildArchitectureFooter(isDark),
               ],
             ),
