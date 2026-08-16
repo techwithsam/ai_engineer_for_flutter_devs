@@ -4,13 +4,22 @@ import 'models/text_analysis_models.dart';
 import 'services/gemini_service.dart';
 import 'services/on_device_classifier_service.dart';
 import 'theme/app_theme.dart';
+
+import 'video_3/video_3_app.dart';
 import 'widgets/api_key_dialog.dart';
 import 'widgets/gemini_results_card.dart';
 import 'widgets/on_device_results_card.dart';
 import 'widgets/sample_text_presets.dart';
 
 void main() {
-  runApp(const SmartTextAnalyzerApp());
+  // RUN VIDEO 3 APP (AI Agents & Workflows: Planning -> Generation -> Validation)
+  runApp(const Video3App());
+
+  // RUN VIDEO 2 APP (Reliable AI - Structured Output, Streaming & Error Handling)
+  // runApp(const Video2ProductionApp());
+
+  // RUN VIDEO 1 APP (Smart Text Analyzer - Cloud Gemini + On-Device TFLite)
+  // runApp(const SmartTextAnalyzerApp());
 }
 
 class SmartTextAnalyzerApp extends StatelessWidget {

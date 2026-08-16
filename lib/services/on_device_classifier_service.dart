@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:tflite_flutter/tflite_flutter.dart';
 import '../models/text_analysis_models.dart';
+import 'tflite_helper.dart';
 
 class OnDeviceClassifierService {
-  Interpreter? _interpreter;
+  dynamic _interpreter;
   bool _isInitialized = false;
 
   // Sentiment lexicon dictionaries for instant local token scoring
@@ -108,12 +108,16 @@ class OnDeviceClassifierService {
     ],
   };
 
-  /// Initialize TFLite Interpreter if asset model is provided.
+  /// Initialize TFLite Interpreter if asset model is provided (Mobile/Desktop native only).
   Future<void> initializeModel({String? modelPath}) async {
+    if (kIsWeb) {
+      _isInitialized = false;
+      return;
+    }
     if (modelPath != null) {
       try {
-        _interpreter = await Interpreter.fromAsset(modelPath);
-        _isInitialized = true;
+        _interpreter = await TFLiteInterpreterFacade.fromAsset(modelPath);
+        _isInitialized = _interpreter != null;
       } catch (e) {
         debugPrint('TFLite native model initialization note: $e');
         _isInitialized = false;
@@ -138,7 +142,7 @@ class OnDeviceClassifierService {
       );
     }
 
-    // Check if real TFLite model interpreter is active
+    // Check if real TFLite model interpreter is active (Native Mobile only)
     if (_isInitialized && _interpreter != null) {
       try {
         final result = _runTFLiteInference(text, stopwatch);
@@ -149,7 +153,7 @@ class OnDeviceClassifierService {
       }
     }
 
-    // Fast high-speed local token analysis engine (on-device fallback)
+    // Fast high-speed local token analysis engine (on-device fallback for Web & Mobile)
     final words = _tokenize(text);
     final detectedKeywords = <String>{};
 
@@ -226,20 +230,16 @@ class OnDeviceClassifierService {
   }
 
   OnDeviceClassification _runTFLiteInference(String text, Stopwatch stopwatch) {
-    // Demonstration of TFLite tensor allocation & output reading
-    // Input: shape [1, 256], Output: shape [1, 3] for sentiment, [1, 5] for category
     var input = List.generate(1, (_) => List.filled(256, 0));
     var sentimentOutput = List.generate(1, (_) => List.filled(3, 0.0));
     var categoryOutput = List.generate(1, (_) => List.filled(5, 0.0));
 
-    // Tokenize text into sequence IDs
     final tokens = _tokenize(text);
     for (int i = 0; i < min(tokens.length, 256); i++) {
       input[0][i] = tokens[i].hashCode % 10000;
     }
 
-    // Run inference using tflite_flutter Interpreter
-    _interpreter!.runForMultipleInputs([input], {
+    _interpreter.runForMultipleInputs([input], {
       0: sentimentOutput,
       1: categoryOutput,
     });
@@ -265,6 +265,8 @@ class OnDeviceClassifierService {
   }
 
   void dispose() {
-    _interpreter?.close();
+    try {
+      _interpreter?.close();
+    } catch (_) {}
   }
 }
