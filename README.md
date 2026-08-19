@@ -156,7 +156,7 @@ Future<T> retryWithBackoff<T>({
 
 Download the **AI Engineering for Flutter Developers Guide PDF** (includes architecture diagrams, full code walkthroughs, and production checklists):
 
-👉 **[techwithsam.dev/ai-starter-kit](https://techwithsam.dev/ai-starter-kit)**
+👉 **[techwithsam.dev/ai-starter-kit-2](https://techwithsam.dev/ai-starter-kit-2)**
 
 ---
 
